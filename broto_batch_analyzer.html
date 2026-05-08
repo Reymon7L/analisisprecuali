@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b;padding:20px;font-size:13px}
+h1{font-size:1.05rem;font-weight:700;margin-bottom:2px}
+.sub{color:#64748b;font-size:.75rem;margin-bottom:18px}
+.upload-panel{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px}
+.upload-panel h2{font-size:.78rem;font-weight:700;color:#4338ca;margin-bottom:10px}
+.upload-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.drop-btn{display:inline-block;border:2px dashed #c7d2fe;border-radius:8px;padding:9px 18px;background:#eef2ff;color:#4338ca;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.drop-btn:hover{background:#e0e7ff}
+.drop-btn.green{background:#f0fdf4;border-color:#86efac;color:#15803d}
+.drop-btn.green:hover{background:#dcfce7}
+input[type=file]{display:none}
+.sbar{padding:9px 14px;border-radius:7px;font-size:.78rem;margin-bottom:14px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+.sbar.proc{background:#fefce8;color:#a16207;border-color:#fde047}
+.sbar.ok{background:#f0fdf4;color:#15803d;border-color:#86efac}
+.sbar.err{background:#fef2f2;color:#dc2626;border-color:#fca5a5}
+.sbar.warn{background:#fff7ed;color:#92400e;border-color:#fed7aa}
+#mapperSection{display:none;background:#fff;border:2px solid #6366f1;border-radius:10px;padding:16px;margin-bottom:16px}
+#mapperSection h2{font-size:.82rem;font-weight:700;color:#4338ca;margin-bottom:4px}
+.hint{font-size:.72rem;color:#64748b;margin-bottom:12px}
+.map-grid{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;margin-bottom:12px;max-height:300px;overflow-y:auto}
+.sv{font-family:monospace;background:#f1f5f9;padding:4px 8px;border-radius:5px;font-size:.75rem;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv .cnt{color:#94a3b8;font-size:.68rem;margin-left:4px}
+.map-grid select{padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:.75rem;background:#fff;cursor:pointer}
+.sel-ok{border-color:#86efac!important;background:#f0fdf4!important;color:#15803d!important}
+.sel-nh{border-color:#fcd34d!important;background:#fffbeb!important;color:#92400e!important}
+.sel-cpf{border-color:#fca5a5!important;background:#fef2f2!important;color:#dc2626!important}
+.btn-confirm{background:#6366f1;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:.78rem;font-weight:600;cursor:pointer}
+.map-badges{font-size:.7rem;color:#64748b;margin-bottom:12px;line-height:2;display:none}
+.tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:.68rem;margin:1px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.tag.ok{background:#dcfce7;color:#15803d}
+.tag.nh{background:#fef9c3;color:#92400e}
+.tag.cpf{background:#fee2e2;color:#dc2626}
+.tag.out{background:#f1f5f9;color:#475569}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px}
+.kpi .lbl{font-size:.7rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.kpi .val{font-size:1.35rem;font-weight:700;color:#1e293b}
+.kpi .val.green{color:#16a34a}
+.kpi .val.amber{color:#d97706}
+.kpi .val.red{color:#dc2626}
+.kpi .sub2{font-size:.7rem;color:#94a3b8;margin-top:2px}
+.sec-title{font-size:.68rem;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px}
+.table-wrap{overflow-x:auto;background:#fff;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:.75rem}
+th{padding:9px 11px;text-align:right;color:#64748b;font-weight:600;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+th:first-child{text-align:left}
+td{padding:8px 11px;border-bottom:1px solid #f1f5f9;text-align:right;color:#334155}
+td:first-child{text-align:left;color:#1e293b}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+tr.total-row td{font-weight:700;background:#eef2ff;color:#4338ca;border-top:2px solid #a5b4fc}
+.pct{color:#6366f1;font-weight:600}
+.chip-ok{color:#15803d;font-weight:600}
+.chip-nh{color:#b45309}
+.chip-cpf{color:#dc2626}
+.chip-out{color:#6b7280}
+.bar-cell{display:flex;align-items:center;gap:5px;justify-content:flex-end}
+.bar-track{width:50px;background:#e2e8f0;border-radius:99px;height:5px}
+.bar-fill{height:5px;border-radius:99px;background:#6366f1}
+.empty{text-align:center;padding:28px;color:#94a3b8;font-size:.8rem}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.btn{padding:8px 18px;border-radius:7px;border:none;cursor:pointer;font-size:.78rem;font-weight:600}
+.btn-exp{background:#6366f1;color:#fff}
+.btn-exp:disabled{background:#e2e8f0;color:#94a3b8;cursor:not-allowed}
+.btn-clr{background:#fff;color:#dc2626;border:1px solid #fca5a5}
+</style>
+</head>
+<body>
+
+<h1>Broto · Simulações Pré-Cuali (batch)</h1>
+<p class="sub">Coluna <code>resultado</code> · formato Coplacana / Vibra / Copercampos</p>
+
+<div class="upload-panel">
+  <h2>Adicionar arquivos</h2>
+  <div class="upload-row">
+    <label class="drop-btn" for="zipInput">📦 Selecionar ZIP</label>
+    <input type="file" id="zipInput" accept=".zip">
+    <label class="drop-btn green" for="csvInput">📄 Selecionar CSV / Excel</label>
+    <input type="file" id="csvInput" accept=".csv,.xlsx,.xls" multiple>
+  </div>
+  <div style="font-size:.7rem;color:#94a3b8;margin-top:8px">ZIP: processa todos os arquivos internos &nbsp;·&nbsp; CSV/Excel: seleção múltipla com Ctrl/Cmd</div>
+</div>
+
+<div class="sbar" id="sbar">Selecione um ZIP ou arquivos CSV/Excel para começar.</div>
+<div id="mapperSection">
+  <h2>⚙️ Confirmar mapeamento — coluna <code>resultado</code></h2>
+  <p class="hint">Valores únicos encontrados. Associa cada um à categoria e confirma.</p>
+  <div class="map-grid" id="mapGrid"></div>
+  <button class="btn-confirm" id="btnConfirm">✓ Confirmar e processar</button>
+</div>
+<div class="map-badges" id="mapBadges"></div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="lbl">Total Simulações</div><div class="val" id="kpiTotal">—</div><div class="sub2">acumulado</div></div>
+  <div class="kpi"><div class="lbl">Aprovadas (OK)</div><div class="val green" id="kpiOk">—</div><div class="sub2" id="kpiOkPct">—</div></div>
+  <div class="kpi"><div class="lbl">Não Habilitados</div><div class="val amber" id="kpiNH">—</div><div class="sub2" id="kpiNHPct">—</div></div>
+  <div class="kpi"><div class="lbl">CPF Inválido</div><div class="val red" id="kpiCPF">—</div><div class="sub2" id="kpiCPFPct">—</div></div>
+</div>
+
+<div class="sec-title">Por arquivo</div>
+<div class="table-wrap"><table>
+  <thead><tr><th>Arquivo</th><th>Total</th><th>Aprovadas (OK)</th><th>% Aprov.</th><th>Não Habilitado</th><th>CPF Inválido</th><th>Outros</th></tr></thead>
+  <tbody id="tbArquivo"><tr><td colspan="7" class="empty">Nenhum arquivo processado</td></tr></tbody>
+</table></div>
+
+<div class="sec-title">Por base / cooperativa</div>
+<div class="table-wrap"><table>
+  <thead><tr><th>Base / Cooperativa</th><th>Total</th><th>Aprovadas (OK)</th><th>% Aprov.</th><th>Não Habilitado</th><th>CPF Inválido</th><th>Outros</th></tr></thead>
+  <tbody id="tbBase"><tr><td colspan="7" class="empty">—</td></tr></tbody>
+</table></div>
+
+<div class="actions">
+  <button class="btn btn-exp" id="btnExport" disabled>⬇ Exportar Excel</button>
+  <button class="btn btn-clr" id="btnClear">🗑 Limpar tudo</button>
+</div>
+
+<script>
+var rows = [];
+var statusMap = {};
+var pendingRaw = [];
+
+var CATS = [
+  {val:'ok',    label:'Aprovada (OK)'},
+  {val:'nh',    label:'Não Habilitado'},
+  {val:'cpf',   label:'CPF Inválido'},
+  {val:'outros',label:'Outros'}
+];
+
+function guessResultado(s) {
+  var v = s.toLowerCase();
+  if (v === 'ok') return 'ok';
+  if (/não habilitado|nao habilitado/.test(v)) return 'nh';
+  if (/cpf|cnpj|dígito|digito|11 d/.test(v)) return 'cpf';
+  return 'outros';
+}
+
+function setStatus(msg, type) {
+  var el = document.getElementById('sbar');
+  el.textContent = msg;
+  el.className = 'sbar' + (type ? ' ' + type : '');
+}
+
+function fmt(n) { return n.toLocaleString('pt-BR'); }
+function pct(a, b) { return b > 0 ? (a/b*100).toFixed(1) + '%' : '0.0%'; }
+function barCell(rate) {
+  var w = Math.min(rate, 100).toFixed(0);
+  return '<div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:'+w+'%"></div></div><span class="pct">'+rate.toFixed(1)+'%</span></div>';
+}
+function baseName(fname) {
+  return fname
+    .replace(/\.\w+$/, '')
+    .replace(/[\s_-]+\d{1,2}[\/\-]\d{2}[\/\-]?\d{0,4}.*$/, '')
+    .replace(/[\s_(]+\d+\)?$/, '')
+    .trim();
+}
+
+// ── EVENTOS ──────────────────────────────────────────────────
+document.getElementById('zipInput').addEventListener('change', function() {
+  if (this.files && this.files[0]) {
+    processZip(this.files[0]);
+  }
+  this.value = '';
+});
+
+document.getElementById('csvInput').addEventListener('change', function() {
+  if (this.files && this.files.length > 0) {
+    processFiles(Array.from(this.files));
+  }
+  this.value = '';
+});
+
+document.getElementById('btnConfirm').addEventListener('click', function() {
+  confirmMapping();
+});
+
+document.getElementById('btnExport').addEventListener('click', function() {
+  exportExcel();
+});
+
+document.getElementById('btnClear').addEventListener('click', function() {
+  clearAll();
+});
+
+// ── ZIP ───────────────────────────────────────────────────────
+function processZip(file) {
+  setStatus('Descomprimindo ' + file.name + '...', 'proc');
+  JSZip.loadAsync(file).then(function(zip) {
+    var entries = [];
+    zip.forEach(function(path, entry) {
+      if (!entry.dir && /\.(xlsx|xls|csv)$/i.test(path) && path.indexOf('__MACOSX') === -1) {
+        entries.push(entry);
+      }
+    });
+    if (entries.length === 0) {
+      setStatus('Nenhum .xlsx/.xls/.csv no ZIP.', 'err');
+      return;
+    }
+    var promises = entries.map(function(entry) {
+      return entry.async('arraybuffer').then(function(buf) {
+        return { buf: buf, fname: entry.name.split('/').pop() };
+      });
+    });
+    Promise.all(promises).then(function(fileList) {
+      queueAndMap(fileList);
+    });
+  }).catch(function(e) {
+    setStatus('Erro ao ler ZIP: ' + e.message, 'err');
+  });
+}
+
+// ── CSV/EXCEL DIRETO ──────────────────────────────────────────
+function processFiles(files) {
+  setStatus('Lendo ' + files.length + ' arquivo(s)...', 'proc');
+  var promises = files.map(function(f) {
+    return f.arrayBuffer().then(function(buf) {
+      return { buf: buf, fname: f.name };
+    });
+  });
+  Promise.all(promises).then(function(fileList) {
+    queueAndMap(fileList);
+  }).catch(function(e) {
+    setStatus('Erro: ' + e.message, 'err');
+  });
+}
+
+// ── PARSE + MAPPER ────────────────────────────────────────────
+function queueAndMap(fileList) {
+  pendingRaw = [];
+  var newVals = {};
+
+  fileList.forEach(function(item) {
+    try {
+      var parsed = readSheet(item.buf, item.fname);
+      pendingRaw.push({ fname: item.fname, data: parsed.data, col: parsed.col });
+      parsed.data.forEach(function(row) {
+        var s = parsed.col ? String(row[parsed.col] != null ? row[parsed.col] : '').trim() : '';
+        if (s) newVals[s] = (newVals[s] || 0) + 1;
+      });
+    } catch(e) {
+      console.warn('Erro em ' + item.fname + ':', e.message);
+    }
+  });
+
+  if (pendingRaw.length === 0) {
+    setStatus('Nenhum arquivo válido encontrado.', 'err');
+    return;
+  }
+
+  var unmapped = Object.keys(newVals).filter(function(s) { return !(s in statusMap); }).map(function(s) { return [s, newVals[s]]; });
+
+  if (unmapped.length === 0) {
+    commitPending();
+  } else {
+    showMapper(unmapped);
+    setStatus(pendingRaw.length + ' arquivo(s) lido(s). Confirma o mapeamento abaixo ↓', 'warn');
+  }
+}
+
+function readSheet(buf, fname) {
+  var wb;
+  if (/\.csv$/i.test(fname)) {
+    var txt = new TextDecoder('utf-8').decode(buf);
+    wb = XLSX.read(txt, { type: 'string' });
+  } else {
+    wb = XLSX.read(buf, { type: 'arraybuffer' });
+  }
+  var sheetName = wb.SheetNames[0];
+  for (var i = 0; i < wb.SheetNames.length; i++) {
+    if (/customquery/i.test(wb.SheetNames[i])) { sheetName = wb.SheetNames[i]; break; }
+  }
+  var ws = wb.Sheets[sheetName];
+  var data = XLSX.utils.sheet_to_json(ws, { defval: null });
+  if (!data.length) throw new Error('Sem dados');
+  var keys = Object.keys(data[0]);
+  var col = null;
+  for (var k = 0; k < keys.length; k++) {
+    if (/^resultado$/i.test(keys[k].trim())) { col = keys[k]; break; }
+  }
+  if (!col) {
+    for (var k = 0; k < keys.length; k++) {
+      if (/^status$/i.test(keys[k].trim())) { col = keys[k]; break; }
+    }
+  }
+  if (!col) {
+    for (var k = 0; k < keys.length; k++) {
+      if (/result/i.test(keys[k])) { col = keys[k]; break; }
+    }
+  }
+  return { data: data, col: col };
+}
+
+function showMapper(unmapped) {
+  var grid = document.getElementById('mapGrid');
+  grid.innerHTML = '';
+  unmapped.forEach(function(pair) {
+    var sv = pair[0], cnt = pair[1];
+    var suggested = guessResultado(sv);
+    var div = document.createElement('div');
+    div.className = 'sv';
+    div.title = sv;
+    div.innerHTML = (sv.length > 65 ? sv.slice(0,63) + '…' : sv) + ' <span class="cnt">(' + cnt.toLocaleString('pt-BR') + ' linhas)</span>';
+    grid.appendChild(div);
+    var sel = document.createElement('select');
+    sel.dataset.sv = sv;
+    sel.className = 'sel-' + suggested;
+    CATS.forEach(function(c) {
+      var opt = document.createElement('option');
+      opt.value = c.val;
+      opt.textContent = c.label;
+      if (c.val === suggested) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function() { this.className = 'sel-' + this.value; });
+    grid.appendChild(sel);
+  });
+  document.getElementById('mapperSection').style.display = 'block';
+}
+
+function confirmMapping() {
+  var sels = document.querySelectorAll('#mapGrid select');
+  sels.forEach(function(sel) { statusMap[sel.dataset.sv] = sel.value; });
+  document.getElementById('mapperSection').style.display = 'none';
+  updateMapBadges();
+  commitPending();
+}
+
+function updateMapBadges() {
+  var cats = { ok:[], nh:[], cpf:[], outros:[] };
+  Object.keys(statusMap).forEach(function(sv) { cats[statusMap[sv]].push(sv); });
+  var parts = [];
+  [['ok','OK'],['nh','Não Hab.'],['cpf','CPF Inv.'],['outros','Outros']].forEach(function(pair) {
+    var c = pair[0], l = pair[1];
+    if (cats[c].length) {
+      parts.push('<b>'+l+':</b> ' + cats[c].map(function(s) {
+        return '<span class="tag '+c+'" title="'+s+'">'+(s.length>45?s.slice(0,43)+'…':s)+'</span>';
+      }).join(''));
+    }
+  });
+  var el = document.getElementById('mapBadges');
+  el.innerHTML = 'Mapeamento ativo → ' + parts.join(' &nbsp;|&nbsp; ');
+  el.style.display = 'block';
+}
+
+function commitPending() {
+  var added = 0;
+  pendingRaw.forEach(function(item) {
+    var ok=0, nh=0, cpf=0, outros=0;
+    item.data.forEach(function(row) {
+      var s = item.col ? String(row[item.col] != null ? row[item.col] : '').trim() : '';
+      var cat = statusMap[s] || 'outros';
+      if (cat==='ok') ok++;
+      else if (cat==='nh') nh++;
+      else if (cat==='cpf') cpf++;
+      else outros++;
+    });
+    rows.push({ arquivo: item.fname, total: item.data.length, ok: ok, nh: nh, cpf: cpf, outros: outros });
+    added++;
+  });
+  pendingRaw = [];
+  renderAll();
+  document.getElementById('btnExport').disabled = false;
+  setStatus('✓ ' + added + ' arquivo(s) adicionado(s) — ' + rows.length + ' total acumulado.', 'ok');
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function renderAll() {
+  var T = { total:0, ok:0, nh:0, cpf:0, outros:0 };
+  rows.forEach(function(r) { T.total+=r.total; T.ok+=r.ok; T.nh+=r.nh; T.cpf+=r.cpf; T.outros+=r.outros; });
+  var rTotal = T.total > 0 ? T.ok/T.total*100 : 0;
+
+  document.getElementById('kpiTotal').textContent = fmt(T.total);
+  document.getElementById('kpiOk').textContent    = fmt(T.ok);
+  document.getElementById('kpiOkPct').textContent = pct(T.ok, T.total);
+  document.getElementById('kpiNH').textContent    = fmt(T.nh);
+  document.getElementById('kpiNHPct').textContent = pct(T.nh, T.total);
+  document.getElementById('kpiCPF').textContent   = fmt(T.cpf);
+  document.getElementById('kpiCPFPct').textContent= pct(T.cpf, T.total);
+
+  var html = '';
+  rows.forEach(function(r) {
+    var rate = r.total > 0 ? r.ok/r.total*100 : 0;
+    html += '<tr>'
+      + '<td title="'+r.arquivo+'">'+(r.arquivo.length>44?r.arquivo.slice(0,42)+'…':r.arquivo)+'</td>'
+      + '<td>'+fmt(r.total)+'</td>'
+      + '<td class="chip-ok">'+fmt(r.ok)+'</td>'
+      + '<td>'+barCell(rate)+'</td>'
+      + '<td class="chip-nh">'+fmt(r.nh)+'</td>'
+      + '<td class="chip-cpf">'+fmt(r.cpf)+'</td>'
+      + '<td class="chip-out">'+fmt(r.outros)+'</td>'
+      + '</tr>';
+  });
+  html += '<tr class="total-row">'
+    + '<td>TOTAL</td><td>'+fmt(T.total)+'</td><td>'+fmt(T.ok)+'</td>'
+    + '<td>'+barCell(rTotal)+'</td><td>'+fmt(T.nh)+'</td><td>'+fmt(T.cpf)+'</td><td>'+fmt(T.outros)+'</td>'
+    + '</tr>';
+  document.getElementById('tbArquivo').innerHTML = html;
+
+  var byBase = {};
+  rows.forEach(function(r) {
+    var b = baseName(r.arquivo);
+    if (!byBase[b]) byBase[b] = {total:0,ok:0,nh:0,cpf:0,outros:0};
+    var x = byBase[b]; x.total+=r.total; x.ok+=r.ok; x.nh+=r.nh; x.cpf+=r.cpf; x.outros+=r.outros;
+  });
+  html = '';
+  Object.keys(byBase).sort(function(a,b){ return byBase[b].total - byBase[a].total; }).forEach(function(base) {
+    var b = byBase[base];
+    var rate = b.total > 0 ? b.ok/b.total*100 : 0;
+    html += '<tr>'
+      + '<td>'+base+'</td><td>'+fmt(b.total)+'</td><td class="chip-ok">'+fmt(b.ok)+'</td>'
+      + '<td>'+barCell(rate)+'</td><td class="chip-nh">'+fmt(b.nh)+'</td>'
+      + '<td class="chip-cpf">'+fmt(b.cpf)+'</td><td class="chip-out">'+fmt(b.outros)+'</td>'
+      + '</tr>';
+  });
+  html += '<tr class="total-row">'
+    + '<td>TOTAL</td><td>'+fmt(T.total)+'</td><td>'+fmt(T.ok)+'</td>'
+    + '<td>'+barCell(rTotal)+'</td><td>'+fmt(T.nh)+'</td><td>'+fmt(T.cpf)+'</td><td>'+fmt(T.outros)+'</td>'
+    + '</tr>';
+  document.getElementById('tbBase').innerHTML = html;
+}
+
+// ── EXPORT ────────────────────────────────────────────────────
+function exportExcel() {
+  if (!rows.length) return;
+  var T = {total:0,ok:0,nh:0,cpf:0,outros:0};
+  rows.forEach(function(r){T.total+=r.total;T.ok+=r.ok;T.nh+=r.nh;T.cpf+=r.cpf;T.outros+=r.outros;});
+  var wb = XLSX.utils.book_new();
+
+  var a1 = [['Arquivo','Total','Aprovadas (OK)','% Aprovação','Não Habilitado','CPF Inválido','Outros']];
+  rows.forEach(function(r){ a1.push([r.arquivo,r.total,r.ok,r.total>0?r.ok/r.total:0,r.nh,r.cpf,r.outros]); });
+  a1.push(['TOTAL',T.total,T.ok,T.total>0?T.ok/T.total:0,T.nh,T.cpf,T.outros]);
+  var ws1 = XLSX.utils.aoa_to_sheet(a1);
+  ws1['!cols']=[{wch:42},{wch:10},{wch:14},{wch:12},{wch:16},{wch:14},{wch:8}];
+  for (var i=2;i<=a1.length;i++){var c=XLSX.utils.encode_cell({r:i-1,c:3});if(ws1[c])ws1[c].z='0.0%';}
+  XLSX.utils.book_append_sheet(wb, ws1, 'Por Arquivo');
+
+  var byBase = {};
+  rows.forEach(function(r){
+    var b=baseName(r.arquivo);
+    if(!byBase[b])byBase[b]={total:0,ok:0,nh:0,cpf:0,outros:0};
+    var x=byBase[b];x.total+=r.total;x.ok+=r.ok;x.nh+=r.nh;x.cpf+=r.cpf;x.outros+=r.outros;
+  });
+  var a2=[['Base / Cooperativa','Total','Aprovadas (OK)','% Aprovação','Não Habilitado','CPF Inválido','Outros']];
+  Object.keys(byBase).sort(function(a,b){return byBase[b].total-byBase[a].total;}).forEach(function(b){
+    var x=byBase[b];a2.push([b,x.total,x.ok,x.total>0?x.ok/x.total:0,x.nh,x.cpf,x.outros]);
+  });
+  a2.push(['TOTAL',T.total,T.ok,T.total>0?T.ok/T.total:0,T.nh,T.cpf,T.outros]);
+  var ws2=XLSX.utils.aoa_to_sheet(a2);
+  ws2['!cols']=[{wch:36},{wch:10},{wch:14},{wch:12},{wch:16},{wch:14},{wch:8}];
+  for(var i=2;i<=a2.length;i++){var c=XLSX.utils.encode_cell({r:i-1,c:3});if(ws2[c])ws2[c].z='0.0%';}
+  XLSX.utils.book_append_sheet(wb,ws2,'Por Base');
+
+  XLSX.writeFile(wb,'Broto_Simulacoes_Batch.xlsx');
+}
+
+// ── LIMPAR ────────────────────────────────────────────────────
+function clearAll() {
+
+  rows = [];
+  pendingRaw = [];
+  var keys = Object.keys(statusMap);
+  keys.forEach(function(k){ delete statusMap[k]; });
+  document.getElementById('tbArquivo').innerHTML = '<tr><td colspan="7" class="empty">Nenhum arquivo processado</td></tr>';
+  document.getElementById('tbBase').innerHTML    = '<tr><td colspan="7" class="empty">—</td></tr>';
+  ['kpiTotal','kpiOk','kpiNH','kpiCPF'].forEach(function(id){ document.getElementById(id).textContent='—'; });
+  ['kpiOkPct','kpiNHPct','kpiCPFPct'].forEach(function(id){ document.getElementById(id).textContent='—'; });
+  document.getElementById('mapBadges').style.display = 'none';
+  document.getElementById('mapperSection').style.display = 'none';
+  document.getElementById('btnExport').disabled = true;
+  setStatus('Dados limpos. Selecione um ZIP ou arquivos CSV/Excel para começar.');
+}
+</script>
+</body>
+</html>
